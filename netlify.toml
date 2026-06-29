@@ -1,0 +1,19 @@
+# Netlify 部署配置 — 微醺酒馆
+# 纯静态页面，无需构建步骤
+
+[build]
+  publish = "."
+
+# 安全头
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+# 图片资源长期缓存
+[[headers]]
+  for = "/pictures/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

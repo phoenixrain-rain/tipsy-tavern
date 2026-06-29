@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>微醺酒馆 | Cocktail Menu</title>
+
+<!-- PWA / Mobile 优化 -->
+<meta name="theme-color" content="#1a0f07">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="微醺酒馆">
+<meta name="description" content="微醺酒馆 - 深夜微醺，一杯刚好。精选鸡尾酒配方菜单。">
+<meta name="format-detection" content="telephone=no">
+
+<!-- Open Graph (社交分享卡片) -->
+<meta property="og:title" content="微醺酒馆 | Cocktail Menu">
+<meta property="og:description" content="深夜微醺，一杯刚好。精选鸡尾酒配方菜单。">
+<meta property="og:type" content="website">
+
+<style>
+/* ============================================================
+   CSS 变量 & 全局样式
+   ============================================================ */
+:root {
+  --clr-amber: #f4a460;
+  --clr-gold: #d4a574;
+  --clr-warm: #f5deb3;
+  --clr-dark: #1a0f07;
+  --clr-brick: #8b4513;
+  --clr-wood: #5c3317;
+  --clr-wood-light: #8b6914;
+  --clr-neon: #ff6b35;
+  --clr-neon-blue: #7ec8e3;
+  --clr-cream: #faf0e6;
+  --clr-card-bg: rgba(30, 15, 8, 0.85);
+  --font-title: 'Georgia', 'Noto Serif SC', serif;
+  --font-body: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-decorative: 'Brush Script MT', 'KaiTi', cursive;
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-neon: 0 0 20px rgba(255,107,53,0.6), 0 0 60px rgba(255,107,53,0.3);
+  --transition-flip: 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html {
+  scroll-behavior:smooth;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--clr-dark);
+  color: var(--clr-cream);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+  /* 防止 iOS 橡皮筋效果导致误触 */
+  overscroll-behavior-y: contain;
+}
+
+/* ============================================================
+   背景纹理层
+   ============================================================ */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.bg-brick {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent, transparent 58px,
+      rgba(0,0,0,0.25) 58px, rgba(0,0,0,0.25) 60px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent, transparent 98px,
+      rgba(0,0,0,0.15) 98px, rgba(0,0,0,0.15) 100px
+    ),
+    linear-gradient(180deg, #5c2a16 0%, #3d1a0a 50%, #4a2010 100%);
+}
+.bg-brick::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 58px,
+    rgba(255,255,255,0.02) 58px, rgba(255,255,255,0.02) 60px
+  );
+  background-position: 50px 0;
+}
+.bg-wood {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent, transparent 2px,
+      rgba(139,90,43,0.08) 2px, rgba(139,90,43,0.08) 4px
+    ),
+    linear-gradient(180deg,
+      rgba(139,69,19,0.3) 0%, rgba(92,51,23,0.2) 20%,
+      rgba(139,69,19,0.25) 40%, rgba(92,51,23,0.15) 60%,
+      rgba(139,69,19,0.2) 80%, rgba(92,51,23,0.3) 100%
+    );
+}
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center,
+    transparent 40%, rgba(10,5,3,0.5) 70%, rgba(5,2,1,0.8) 100%
+  );
+}
+
+/* ============================================================
+   Canvas 粒子层
+   ============================================================ */
+#particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ============================================================
+   灯串装饰
+   ============================================================ */
+.light-strings {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 180px;
+  z-index: 2;
+  pointer-events: none;
+}
+.light-string {
+  position: absolute;
+  top: 0;
+  height: 120px;
+  width: 100%;
+}
+.light-string::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 5%, rgba(80,60,40,0.5) 15%,
+    rgba(80,60,40,0.5) 85%, transparent 95%
+  );
+}
+.light-bulb {
+  position: absolute;
+  width: 10px; height: 14px;
+  border-radius: 50% 50% 40% 40%;
+  top: 50px;
+  box-shadow: 0 0 8px 2px var(--glow-color, rgba(255,200,100,0.7)),
+              0 0 20px 5px var(--glow-color, rgba(255,180,80,0.4)),
+              0 0 40px 10px var(--glow-color, rgba(255,160,60,0.2));
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,220,1), var(--glow-color, #ffb74d));
+  animation: bulbFlicker var(--flicker-dur, 2.5s) ease-in-out infinite;
+  animation-delay: var(--flicker-delay, 0s);
+}
+.light-bulb::after {
+  content: '';
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: 6px; height: 6px;
+  background: #666;
+  border-radius: 2px 2px 50% 50%;
+}
+
+@keyframes bulbFlicker {
+  0%, 100% { opacity:0.85; transform:scale(1); }
+  25%     { opacity:1;    transform:scale(1.08); }
+  50%     { opacity:0.7;  transform:scale(0.95); }
+  75%     { opacity:1;    transform:scale(1.05); }
+}
+
+/* ============================================================
+   主内容区
+   ============================================================ */
+.main-container {
+  position: relative;
+  z-index: 3;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: calc(20px + var(--safe-top)) 24px calc(100px + var(--safe-bottom)) 24px;
+}
+
+/* ============================================================
+   Header & Logo
+   ============================================================ */
+.header {
+  text-align: center;
+  padding: 30px 20px 20px;
+  position: relative;
+}
+.logo-wrapper {
+  display: inline-block;
+  position: relative;
+  margin-bottom: 10px;
+}
+.logo-svg {
+  width: 260px;
+  height: auto;
+  filter: drop-shadow(0 0 25px rgba(255,180,100,0.5))
+          drop-shadow(0 0 60px rgba(255,140,60,0.25));
+  animation: logoGlow 3s ease-in-out infinite;
+}
+@keyframes logoGlow {
+  0%, 100% { filter: drop-shadow(0 0 25px rgba(255,180,100,0.5)) drop-shadow(0 0 60px rgba(255,140,60,0.25)); }
+  50%      { filter: drop-shadow(0 0 40px rgba(255,200,130,0.8)) drop-shadow(0 0 80px rgba(255,160,70,0.4)); }
+}
+
+.subtitle {
+  font-family: var(--font-decorative);
+  font-size: 1.2rem;
+  color: var(--clr-gold);
+  letter-spacing: 0.15em;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   分类导航
+   ============================================================ */
+.filter-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 36px;
+  /* 移动端横向滚动备用 */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 2px;
+}
+.filter-nav::-webkit-scrollbar { display: none; }
+
+.filter-btn {
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  padding: 12px 26px;  /* ≥44px 触摸目标高度 */
+  min-height: 44px;
+  border: 1.5px solid var(--clr-gold);
+  background: rgba(20,10,5,0.6);
+  color: var(--clr-gold);
+  border-radius: 30px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.35s ease;
+  backdrop-filter: blur(4px);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.filter-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(244,164,96,0.2), rgba(139,69,19,0.1));
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+/* 桌面端悬停效果 */
+@media (hover: hover) {
+  .filter-btn:hover::before { opacity: 1; }
+  .filter-btn:hover {
+    border-color: var(--clr-amber);
+    color: var(--clr-amber);
+    box-shadow: 0 0 20px rgba(244,164,96,0.3);
+    transform: translateY(-2px);
+  }
+}
+/* 移动端点击反馈 */
+.filter-btn:active {
+  border-color: var(--clr-amber);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(244,164,96,0.45);
+  transform: scale(0.95);
+}
+.filter-btn.active {
+  background: linear-gradient(135deg, var(--clr-brick), var(--clr-wood));
+  border-color: var(--clr-amber);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(244,164,96,0.45);
+  font-weight: bold;
+}
+
+/* ============================================================
+   卡片网格
+   ============================================================ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 10px 0;
+}
+
+/* ============================================================
+   卡片容器 - 3D 翻转
+   ============================================================ */
+.card-scene {
+  perspective: 1200px;
+  height: 420px;
+}
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform var(--transition-flip);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.card.flipped {
+  transform: rotateY(180deg);
+}
+
+/* 正面 & 背面共用 */
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---- 正面 ---- */
+.card-front {
+  background: var(--clr-card-bg);
+  border: 1px solid rgba(212,165,116,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.card-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.03) 0%,
+    transparent 30%, transparent 70%,
+    rgba(0,0,0,0.3) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+.card-img-wrap {
+  width: 160px; height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 10px;
+}
+.card-img-wrap img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  transition: transform 0.4s ease;
+}
+/* 桌面悬停放大 */
+@media (hover: hover) {
+  .card:hover .card-img-wrap img {
+    transform: scale(1.06);
+  }
+}
+.card-name {
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  color: var(--clr-warm);
+  letter-spacing: 0.05em;
+  position: relative; z-index: 2;
+  text-shadow: 0 0 12px rgba(255,180,100,0.3);
+}
+.card-name-en {
+  font-size: 0.75rem;
+  color: var(--clr-gold);
+  opacity: 0.6;
+  letter-spacing: 0.1em;
+  position: relative; z-index: 2;
+  margin-top: 2px;
+}
+.card-tap-hint {
+  position: absolute;
+  bottom: 16px;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+  z-index: 3;
+  letter-spacing: 0.08em;
+  animation: hintPulse 2s ease-in-out infinite;
+}
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.75; }
+}
+/* 装饰角标 */
+.card-front .corner-badge {
+  position: absolute;
+  top: 12px; right: 14px;
+  z-index: 4;
+  font-size: 0.65rem;
+  padding: 5px 12px;
+  border-radius: 12px;
+  background: rgba(244,164,96,0.2);
+  color: var(--clr-amber);
+  border: 1px solid rgba(244,164,96,0.3);
+  letter-spacing: 0.08em;
+}
+
+/* ---- 背面 ---- */
+.card-back {
+  background: linear-gradient(160deg, rgba(25,12,6,0.95), rgba(40,20,10,0.95));
+  border: 1px solid rgba(212,165,116,0.3);
+  transform: rotateY(180deg);
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.card-back-title {
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  color: var(--clr-amber);
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(244,164,96,0.25);
+  padding-bottom: 12px;
+  flex-shrink: 0;
+}
+.recipe-steps {
+  list-style: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244,164,96,0.3) transparent;
+  /* iOS 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+}
+.recipe-steps::-webkit-scrollbar { width: 4px; }
+.recipe-steps::-webkit-scrollbar-thumb {
+  background: rgba(244,164,96,0.3);
+  border-radius: 2px;
+}
+
+.recipe-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--clr-cream);
+  opacity: 0.9;
+}
+.step-icon {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 50%;
+  background: rgba(244,164,96,0.2);
+  color: var(--clr-amber);
+  border: 1px solid rgba(244,164,96,0.3);
+}
+.step-text { flex: 1; }
+
+/* 卡片进入动画 */
+.card-scene {
+  animation: cardFadeIn 0.6s ease both;
+}
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   浮动翻回按钮 (移动端无 ESC 键的替代方案)
+   ============================================================ */
+.fab-reset {
+  position: fixed;
+  bottom: calc(28px + var(--safe-bottom));
+  right: 24px;
+  z-index: 100;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(244,164,96,0.5);
+  background: rgba(30,15,8,0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--clr-amber);
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 16px rgba(244,164,96,0.25);
+  transition: all 0.35s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  transform: translateY(20px) scale(0.8);
+  pointer-events: none;
+  user-select: none;
+}
+/* 有卡片翻转时显示 */
+.fab-reset.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.fab-reset:active {
+  transform: scale(0.88);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 24px rgba(244,164,96,0.45);
+  background: rgba(244,164,96,0.2);
+}
+/* 桌面端悬停 */
+@media (hover: hover) {
+  .fab-reset:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 28px rgba(244,164,96,0.5);
+    transform: translateY(-2px) scale(1.05);
+    border-color: var(--clr-amber);
+  }
+}
+/* 提示文字 */
+.fab-reset .fab-label {
+  position: absolute;
+  right: 62px;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--clr-gold);
+  background: rgba(20,10,5,0.85);
+  padding: 6px 12px;
+  border-radius: 14px;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  letter-spacing: 0.06em;
+}
+.fab-reset.visible .fab-label {
+  opacity: 0.9;
+  transform: translateX(0);
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.footer {
+  text-align: center;
+  padding: 40px 20px 30px;
+  position: relative;
+  z-index: 3;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+}
+.footer::before {
+  content: '';
+  display: block;
+  width: 80px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--clr-gold), transparent);
+  margin: 0 auto 16px;
+}
+
+/* ============================================================
+   响应式 — 平板 (≤768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .card-scene { height: 380px; }
+  .card-img-wrap { width: 130px; height: 170px; }
+  .card-name { font-size: 1.2rem; }
+  .logo-svg { width: 200px; }
+  .filter-btn { padding: 11px 20px; font-size: 0.85rem; }
+  .subtitle { font-size: 1rem; }
+  .header { padding: 20px 10px 10px; }
+  .card-back { padding: 18px 14px; }
+  .recipe-step { font-size: 0.82rem; }
+  /* 灯串在平板上减少 */
+  .light-strings { height: 130px; }
+  .light-string { height: 90px; }
+  .light-bulb { top: 35px; }
+}
+
+/* ============================================================
+   响应式 — 手机 (≤480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    margin: 0 auto;
+    gap: 18px;
+  }
+  .card-scene { height: 400px; }
+  .card-img-wrap { width: 140px; height: 180px; }
+
+  /* 导航按钮横向滚动 */
+  .filter-nav {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin: 20px 0 28px;
+    padding: 4px 0;
+    gap: 10px;
+  }
+  .filter-btn {
+    padding: 11px 20px;
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+
+  .logo-svg { width: 180px; }
+  .subtitle { font-size: 0.9rem; }
+  .header { padding: 15px 8px 8px; }
+  .card-back { padding: 16px 12px; }
+  .card-back-title { font-size: 1rem; }
+  .recipe-step { font-size: 0.8rem; gap: 8px; }
+  .step-icon { width: 22px; height: 22px; font-size: 0.7rem; }
+  .card-name { font-size: 1.15rem; }
+
+  /* 灯串进一步简化 */
+  .light-strings { height: 100px; }
+  .light-string { height: 70px; }
+  .light-bulb {
+    width: 7px; height: 10px;
+    top: 28px;
+    box-shadow: 0 0 6px 2px var(--glow-color, rgba(255,200,100,0.6)),
+                0 0 14px 4px var(--glow-color, rgba(255,180,80,0.3)),
+                0 0 28px 8px var(--glow-color, rgba(255,160,60,0.15));
+  }
+
+  .fab-reset {
+    width: 46px; height: 46px;
+    bottom: calc(24px + var(--safe-bottom));
+    right: 16px;
+    font-size: 1.1rem;
+  }
+}
+
+/* ============================================================
+   超小屏 (≤360px)
+   ============================================================ */
+@media (max-width: 360px) {
+  .card-scene { height: 370px; }
+  .card-img-wrap { width: 120px; height: 160px; }
+  .filter-btn { padding: 10px 16px; font-size: 0.72rem; }
+  .logo-svg { width: 150px; }
+  .card-name { font-size: 1.05rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- 背景层 -->
+<div class="bg-layer">
+  <div class="bg-brick"></div>
+  <div class="bg-wood"></div>
+  <div class="bg-vignette"></div>
+</div>
+
+<!-- 粒子画布 -->
+<canvas id="particleCanvas"></canvas>
+
+<!-- 灯串 -->
+<div class="light-strings" id="lightStrings"></div>
+
+<!-- 浮动翻回按钮 (移动端 ESC 替代) -->
+<button class="fab-reset" id="fabReset" aria-label="全部翻回正面" title="全部翻回正面 (ESC)">
+  <span class="fab-label">翻回全部卡片</span>
+  ↩
+</button>
+
+<!-- 主内容 -->
+<div class="main-container">
+
+  <header class="header">
+    <div class="logo-wrapper">
+      <svg class="logo-svg" viewBox="0 0 280 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="glassGrad" cx="50%" cy="30%" r="50%">
+            <stop offset="0%" stop-color="#fff8e7"/>
+            <stop offset="100%" stop-color="#f4a460"/>
+          </radialGradient>
+          <filter id="glowFilter">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- 鸡尾酒杯 -->
+        <g transform="translate(30, 8)" filter="url(#glowFilter)">
+          <polygon points="30,12 0,88 60,88" fill="none" stroke="url(#glassGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+          <polygon points="28,32 8,84 52,84" fill="rgba(244,164,96,0.35)" stroke="none"/>
+          <line x1="30" y1="88" x2="30" y2="104" stroke="url(#glassGrad)" stroke-width="2.5" stroke-linecap="round"/>
+          <ellipse cx="30" cy="107" rx="18" ry="4" fill="none" stroke="url(#glassGrad)" stroke-width="2.5"/>
+          <circle cx="48" cy="28" r="7" fill="none" stroke="#ffcc80" stroke-width="1.5"/>
+          <circle cx="48" cy="28" r="3" fill="rgba(255,204,128,0.4)"/>
+          <line x1="20" y1="18" x2="12" y2="68" stroke="#e8a87c" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="10" cy="16" rx="7" ry="4" fill="rgba(144,238,144,0.6)" transform="rotate(-30,10,16)"/>
+          <circle cx="22" cy="54" r="1.5" fill="rgba(255,255,255,0.6)"/>
+          <circle cx="36" cy="62" r="1" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="28" cy="44" r="1.2" fill="rgba(255,255,255,0.55)"/>
+        </g>
+        <text x="105" y="58" font-family="Georgia, 'Noto Serif SC', serif" font-size="36" fill="#f4a460" font-weight="bold" letter-spacing="6" filter="url(#glowFilter)">微醺酒馆</text>
+        <text x="108" y="82" font-family="'Brush Script MT', KaiTi, cursive" font-size="16" fill="#d4a574" letter-spacing="4" opacity="0.7">Tipsy Tavern</text>
+        <line x1="105" y1="92" x2="230" y2="92" stroke="rgba(244,164,96,0.35)" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <p class="subtitle">— 深夜微醺 · 一杯刚好 —</p>
+  </header>
+
+  <!-- 分类导航 -->
+  <nav class="filter-nav" id="filterNav">
+    <button class="filter-btn active" data-filter="all">🍸 全部</button>
+    <button class="filter-btn" data-filter="white-rum">🥥 白朗姆系列</button>
+    <button class="filter-btn" data-filter="gin">🍇 金酒系列</button>
+    <button class="filter-btn" data-filter="whiskey">🥃 威士忌系列</button>
+  </nav>
+
+  <!-- 卡片网格 -->
+  <main class="card-grid" id="cardGrid">
+    <!-- JS 动态渲染 -->
+  </main>
+
+  <footer class="footer">
+    <p>微醺酒馆 © 2026 · 夜深了，来一杯吧 🥂</p>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   设备检测
+   ============================================================ */
+const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============================================================
+   酒款数据（13款，严格按用户配方）
+   ============================================================ */
+const drinksData = [
+  // ---- 白朗姆系列 ----
+  {
+    id: 'mojito', name: '莫吉托', nameEn: 'Mojito',
+    series: 'white-rum', image: 'pictures/莫吉托.png',
+    steps: ['青柠角+薄荷叶捣出汁','加碎冰至七分满','白朗姆 45ml','糖浆 15ml','苏打水补满','吧勺提拉混合','薄荷叶装饰']
+  },
+  {
+    id: 'cuba-libre', name: '自由古巴', nameEn: 'Cuba Libre',
+    series: 'white-rum', image: 'pictures/自由古巴.png',
+    steps: ['白朗姆 45ml','挤一角柠檬汁','加冰至八分满','可乐补满','提拉混合即可']
+  },
+  {
+    id: 'pina-colada', name: '椰林飘香', nameEn: 'Piña Colada',
+    series: 'white-rum', image: 'pictures/椰林飘香.png',
+    steps: ['白朗姆 60ml','椰奶 60ml','凤梨汁 120ml','加冰 Shake 摇匀','双重过滤入杯']
+  },
+  {
+    id: 'melatonin', name: '褪黑素', nameEn: 'Melatonin',
+    series: 'white-rum', image: 'pictures/褪黑素.png',
+    steps: ['白朗姆 30ml','养乐多一小瓶','橙汁补满','加冰搅拌即可']
+  },
+
+  // ---- 金酒系列 ----
+  {
+    id: 'gin-tonic', name: '金汤力', nameEn: 'Gin & Tonic',
+    series: 'gin', image: 'pictures/金汤力.png',
+    steps: ['金酒 45ml','挤一角青柠汁','加冰至八分满','汤力水补满','轻轻搅拌即可']
+  },
+  {
+    id: 'grape-gin-fizz', name: '葡萄金菲士', nameEn: 'Grape Gin Fizz',
+    series: 'gin', image: 'pictures/葡萄金菲士.png',
+    steps: ['葡萄汁五分满','金酒 30ml','挤一角柠檬汁','苏打水补满','加冰提拉混合']
+  },
+  {
+    id: 'gin-fizz', name: '标准金菲士', nameEn: 'Gin Fizz',
+    series: 'gin', image: 'pictures/葡萄金菲士.png',
+    steps: ['金酒 45ml','青柠汁 20ml','糖浆 10ml','加冰 Shake 摇匀','苏打水补满']
+  },
+  {
+    id: 'pineapple-milk-gin', name: '菠萝奶金', nameEn: 'Pineapple Milk Gin',
+    series: 'gin', image: 'pictures/菠萝奶金.png',
+    steps: ['金酒 30ml','半个柠檬汁','菠萝汁六分满','搅拌均匀','养乐多补满']
+  },
+
+  // ---- 威士忌系列 ----
+  {
+    id: 'whiskey-sour', name: '威士忌酸', nameEn: 'Whiskey Sour',
+    series: 'whiskey', image: 'pictures/占位图.png',
+    steps: ['波本威士忌 60ml','糖浆 30ml','柠檬汁 30ml','加冰 Shake 摇匀','过滤入古典杯']
+  },
+  {
+    id: 'long-island', name: '长岛冰茶', nameEn: 'Long Island Iced Tea',
+    series: 'whiskey', image: 'pictures/占位图.png',
+    steps: ['伏特加 15ml','白朗姆 15ml','金酒 15ml','龙舌兰 15ml','君度 15ml','柠檬汁 15ml','加冰 Shake，可乐补满']
+  },
+  {
+    id: 'highball', name: '嗨棒', nameEn: 'Highball',
+    series: 'whiskey', image: 'pictures/占位图.png',
+    steps: ['威士忌 45ml','加冰至八分满','苏打水补满','半片柠檬装饰']
+  },
+  {
+    id: 'daiquiri', name: '得其利', nameEn: 'Daiquiri (无冰)',
+    series: 'whiskey', image: 'pictures/占位图.png',
+    steps: ['白朗姆 60ml','青柠汁 20ml','糖浆 15ml','加冰 Shake 摇匀','过滤至无冰杯']
+  },
+  {
+    id: 'margarita', name: '玛格丽特', nameEn: 'Margarita (无冰)',
+    series: 'whiskey', image: 'pictures/占位图.png',
+    steps: ['龙舌兰 50ml','君度 20ml','柠檬汁 15ml','加冰 Shake 摇匀','青柠角擦杯口沾盐','过滤至无冰杯']
+  }
+];
+
+/* ============================================================
+   占位图 SVG (内联 Base64 — 可爱风鸡尾酒杯插画)
+   ============================================================ */
+const PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="250" viewBox="0 0 200 250">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#3a2218"/><stop offset="100%" stop-color="#1a0f07"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4a460"/><stop offset="100%" stop-color="#8b4513"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="250" rx="14" fill="url(#bg)" stroke="rgba(212,165,116,0.3)" stroke-width="1.5"/>
+  <g transform="translate(100,95)">
+    <polygon points="0,-58 -48,38 48,38" fill="none" stroke="url(#glass)" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-3,-24 -42,34 42,34" fill="rgba(244,164,96,0.15)"/>
+    <line x1="0" y1="38" x2="0" y2="56" stroke="#d4a574" stroke-width="2.5" stroke-linecap="round"/>
+    <ellipse cx="0" cy="60" rx="18" ry="5" fill="none" stroke="#d4a574" stroke-width="2.5"/>
+    <circle cx="30" cy="-20" r="8" fill="none" stroke="#ffcc80" stroke-width="1.5"/>
+    <line x1="-12" y1="-32" x2="-22" y2="30" stroke="#e8a87c" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="-28" cy="-30" rx="8" ry="4" fill="rgba(144,238,144,0.5)" transform="rotate(-35,-28,-30)"/>
+    <text x="22" y="-38" font-size="14" fill="#ff9999" font-family="sans-serif">♡</text>
+  </g>
+  <text x="100" y="180" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#d4a574">暂未有返图</text>
+  <text x="100" y="205" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" fill="#f4a460">来尝尝吧~ ♡</text>
+  <text x="100" y="235" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="10" fill="rgba(255,255,255,0.35)">👆 点击卡片查看配方</text>
+</svg>`);
+
+const PLACEHOLDER_PATH = 'pictures/占位图.png';
+
+/* ============================================================
+   渲染卡片
+   ============================================================ */
+const cardGrid = document.getElementById('cardGrid');
+
+function renderCards(filter) {
+  const filtered = filter === 'all'
+    ? drinksData
+    : drinksData.filter(d => d.series === filter);
+
+  cardGrid.innerHTML = '';
+
+  filtered.forEach((drink, index) => {
+    const isPlaceholder = drink.image === PLACEHOLDER_PATH;
+    const imgSrc = isPlaceholder ? PLACEHOLDER_SVG : drink.image;
+    const delay = isReducedMotion ? 0 : index * 0.06;
+
+    const scene = document.createElement('div');
+    scene.className = 'card-scene';
+    scene.style.animationDelay = delay + 's';
+
+    scene.innerHTML = `
+      <div class="card" data-id="${drink.id}">
+        <div class="card-face card-front">
+          <span class="corner-badge">${getSeriesLabel(drink.series)}</span>
+          <div class="card-img-wrap">
+            <img src="${imgSrc}" alt="${drink.name}" loading="lazy" decoding="async"
+                 onerror="this.onerror=null;this.src='${PLACEHOLDER_SVG}';"
+                 title="${isPlaceholder ? '暂未有返图，来尝尝吧~ ♡' : drink.name}">
+          </div>
+          <div class="card-name">${drink.name}</div>
+          <div class="card-name-en">${drink.nameEn}</div>
+          <span class="card-tap-hint">👆 点击翻转查看配方</span>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-back-title">🍸 制作配方</div>
+          <ol class="recipe-steps">
+            ${drink.steps.map((s, i) => `
+              <li class="recipe-step">
+                <span class="step-icon">${i + 1}</span>
+                <span class="step-text">${s}</span>
+              </li>
+            `).join('')}
+          </ol>
+        </div>
+      </div>`;
+
+    const card = scene.querySelector('.card');
+
+    // 点击 + 触摸 翻转
+    card.addEventListener('click', (e) => {
+      // 防止滚动容器上的意外触发
+      card.classList.toggle('flipped');
+      updateFabVisibility();
+    });
+
+    // 防止背面滚动时误触翻转
+    const backFace = card.querySelector('.card-back');
+    backFace.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    // 让背面内容区域的点击也能翻转回去
+    backFace.addEventListener('click', function handler(e) {
+      if (e.target === backFace || e.target.closest('.card-back-title')) {
+        card.classList.toggle('flipped');
+        updateFabVisibility();
+      }
+    });
+
+    cardGrid.appendChild(scene);
+  });
+
+  updateFabVisibility();
+}
+
+function getSeriesLabel(series) {
+  const map = { 'white-rum': '白朗姆', 'gin': '金酒', 'whiskey': '威士忌' };
+  return map[series] || '';
+}
+
+/* ============================================================
+   浮动翻回按钮 (FAB)
+   ============================================================ */
+const fabReset = document.getElementById('fabReset');
+
+function updateFabVisibility() {
+  const flippedCount = document.querySelectorAll('.card.flipped').length;
+  if (flippedCount > 0) {
+    fabReset.classList.add('visible');
+  } else {
+    fabReset.classList.remove('visible');
+  }
+}
+
+function resetAllCards() {
+  document.querySelectorAll('.card.flipped').forEach(card => {
+    card.classList.remove('flipped');
+  });
+  updateFabVisibility();
+}
+
+fabReset.addEventListener('click', (e) => {
+  e.preventDefault();
+  resetAllCards();
+});
+
+/* ============================================================
+   分类筛选
+   ============================================================ */
+const filterBtns = document.querySelectorAll('.filter-btn');
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+    // 切换筛选时全部翻回
+    resetAllCards();
+    renderCards(filter);
+    // 移动端：滚动到卡片区域
+    if (isMobile) {
+      cardGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+/* ============================================================
+   ESC 键 + 全局翻回（桌面端）
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    resetAllCards();
+  }
+});
+
+/* ============================================================
+   卡片外部点击翻回（点击已翻转卡片外的区域）
+   ============================================================ */
+document.addEventListener('click', (e) => {
+  // 如果点击的不是卡片内部，且不是 FAB 按钮
+  if (!e.target.closest('.card') && !e.target.closest('.fab-reset')) {
+    const anyFlipped = document.querySelector('.card.flipped');
+    if (anyFlipped && !e.target.closest('.filter-btn')) {
+      resetAllCards();
+    }
+  }
+});
+
+/* ============================================================
+   灯串生成
+   ============================================================ */
+function createLightStrings() {
+  const container = document.getElementById('lightStrings');
+  const bulbColors = [
+    'rgba(255,200,100,0.8)',
+    'rgba(255,160,80,0.8)',
+    'rgba(255,220,140,0.8)',
+    'rgba(255,140,60,0.8)',
+    'rgba(255,180,100,0.7)',
+  ];
+  const stringCount = isMobile ? 1 : 2;
+
+  for (let s = 0; s < stringCount; s++) {
+    const str = document.createElement('div');
+    str.className = 'light-string';
+    str.style.top = (s * 48) + 'px';
+
+    const count = isMobile ? 8 : 10;
+    for (let i = 0; i < count; i++) {
+      const bulb = document.createElement('div');
+      bulb.className = 'light-bulb';
+      bulb.style.left = ((i / (count - 1)) * 78 + 11) + '%';
+      bulb.style.setProperty('--glow-color', bulbColors[i % bulbColors.length]);
+      bulb.style.setProperty('--flicker-dur', (2 + Math.random() * 3) + 's');
+      bulb.style.setProperty('--flicker-delay', (Math.random() * 3) + 's');
+      str.appendChild(bulb);
+    }
+    container.appendChild(str);
+  }
+}
+createLightStrings();
+
+/* ============================================================
+   光斑粒子 Canvas 动画
+   移动端自动减少粒子数 + 降低绘制复杂度
+   ============================================================ */
+(function() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  const particles = [];
+  const MAX_PARTICLES = isMobile ? 22 : 45;
+
+  function resize() {
+    // 移动端使用 devicePixelRatio 降低到 1 以节省性能
+    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    w = canvas.width  = window.innerWidth * dpr;
+    h = canvas.height = window.innerHeight * dpr;
+    canvas.style.width  = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    // 用逻辑尺寸
+    w = window.innerWidth;
+    h = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  // iOS 安全区域变化时重绘
+  window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+
+  class Particle {
+    constructor() { this.reset(true); }
+    reset(init) {
+      this.x = Math.random() * w;
+      this.y = init ? Math.random() * h : h + 30;
+      this.size = Math.random() * 3.5 + 1.5;
+      this.speedY = -(Math.random() * 0.35 + 0.1);
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.4 + 0.15;
+      this.wobble = Math.random() * Math.PI * 2;
+      this.wobbleSpeed = (Math.random() - 0.5) * 0.015;
+      this.color = ['#f4a460','#ffb74d','#ffcc80','#ffe0b2'][Math.floor(Math.random() * 4)];
+    }
+    update() {
+      this.wobble += this.wobbleSpeed;
+      this.x += this.speedX + Math.sin(this.wobble) * 0.15;
+      this.y += this.speedY;
+      if (this.y < -20 || this.x < -20 || this.x > w + 20) this.reset(false);
+    }
+    draw(ctx) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.opacity;
+      ctx.fill();
+      // 光晕（移动端只画一层以节省性能）
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.opacity * 0.15;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  for (let i = 0; i < MAX_PARTICLES; i++) particles.push(new Particle());
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+    requestAnimationFrame(animate);
+  }
+  if (!isReducedMotion) {
+    animate();
+  }
+})();
+
+/* ============================================================
+   初始渲染
+   ============================================================ */
+renderCards('all');
+
+/* ============================================================
+   iOS 状态栏适配
+   ============================================================ */
+if (isIOS) {
+  document.documentElement.style.setProperty('--safe-top', 'env(safe-area-inset-top, 0px)');
+  document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom, 0px)');
+}
+</script>
+
+</body>
+</html>
